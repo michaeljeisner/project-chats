@@ -1,0 +1,30 @@
+[
+  {
+    "user_label": "alice",
+    "conversation_id": "example-1",
+    "title": "Project Atlas rollout",
+    "url": "https://chatgpt.com/c/example-1",
+    "messages": [
+      {
+        "author": "user",
+        "text": "We need the Project Atlas launch notes and final rollout decision."
+      },
+      {
+        "author": "assistant",
+        "text": "Decision: use a staged rollout and keep the fidelity review as a pre-launch requirement."
+      }
+    ]
+  },
+  {
+    "user_label": "alice",
+    "conversation_id": "example-2",
+    "title": "Unrelated cooking notes",
+    "url": "https://chatgpt.com/c/example-2",
+    "messages": [
+      {
+        "author": "user",
+        "text": "Give me a weeknight dinner plan."
+      }
+    ]
+  }
+]

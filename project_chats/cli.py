@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from .core import (
+    DEFAULT_WORKSPACE,
+    build_outputs,
+    bundle,
+    classify,
+    copy_example,
+    ingest,
+    init_workspace,
+)
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        prog="project-chats",
+        description="Find project-related ChatGPT conversations and generate project memory/move queues.",
+    )
+    parser.add_argument("--workspace", type=Path, default=DEFAULT_WORKSPACE, help="Run workspace directory.")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    init = sub.add_parser("init", help="Create a project profile and run workspace.")
+    init.add_argument("--project-name", required=True)
+    init.add_argument("--term", action="append", default=[], help="Project keyword/alias/person/repo/client/domain. Repeatable.")
+    init.add_argument("--force", action="store_true")
+
+    ingest_cmd = sub.add_parser("ingest", help="Ingest JSON, Markdown, text, or a directory of files.")
+    ingest_cmd.add_argument("inputs", nargs="+", type=Path)
+    ingest_cmd.add_argument("--user-label", required=True, help="Label for the account/user these chats came from.")
+
+    sub.add_parser("classify", help="Score chats and write review_queue.csv/html.")
+    sub.add_parser("build", help="Build approved project memory files and move queue.")
+    sub.add_parser("bundle", help="Zip the profile and outputs for handoff.")
+
+    example = sub.add_parser("copy-example", help="Copy sample input files to a destination directory.")
+    example.add_argument("destination", type=Path)
+
+    args = parser.parse_args(argv)
+
+    if args.command == "init":
+        path = init_workspace(args.workspace, args.project_name, args.term, args.force)
+        print(f"Created {path}")
+    elif args.command == "ingest":
+        path = ingest(args.inputs, args.workspace, args.user_label)
+        print(f"Wrote normalized chats to {path}")
+    elif args.command == "classify":
+        path = classify(args.workspace)
+        print(f"Wrote review queue to {path}")
+    elif args.command == "build":
+        paths = build_outputs(args.workspace)
+        for path in paths:
+            print(f"Wrote {path}")
+    elif args.command == "bundle":
+        path = bundle(args.workspace)
+        print(f"Wrote {path}")
+    elif args.command == "copy-example":
+        copy_example(args.destination)
+        print(f"Copied examples to {args.destination}")
+
+
+if __name__ == "__main__":
+    main()

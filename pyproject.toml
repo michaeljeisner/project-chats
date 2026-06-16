@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "project-chats"
+version = "0.1.0"
+description = "Find project-related ChatGPT conversations and generate project memory/move queues."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Project Chats contributors" }]
+keywords = ["chatgpt", "projects", "migration", "conversation-export"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+[project.scripts]
+project-chats = "project_chats.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["project_chats*"]
