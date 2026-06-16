@@ -51,3 +51,36 @@ python3 -m playwright install chromium
 ```
 
 Keep `Dry run` enabled for the first pass, then run with `Limit` set to `1`.
+
+## Browser And Account Selection
+
+The GUI uses the `auto-move` CLI command underneath the hood.
+
+Default browser:
+
+```text
+chrome
+```
+
+Default browser profile:
+
+```text
+project-chat-run/browser-profile
+```
+
+The account is configured by signing into ChatGPT inside that browser profile. The first non-dry run opens the browser. Sign into the account that owns the approved chats, then continue.
+
+For multiple accounts, use different browser profile directories:
+
+```text
+profiles/alice
+profiles/bob
+```
+
+In the GUI, set these in `Run` -> `Auto-Move Approved Chats`:
+
+- `Browser`: browser channel, usually `chrome`
+- `Browser profile directory`: the login/profile to use
+- `Project override`: optional target project name override
+- `Dry run`: test without moving chats
+- `Limit`: move only the first N approved chats

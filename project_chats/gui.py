@@ -67,6 +67,10 @@ class ProjectChatsApp:
         self.input_path_var = StringVar(value="")
         self.limit_var = StringVar(value="")
         self.dry_run_var = StringVar(value="1")
+        self.browser_profile_var = StringVar(value="")
+        self.browser_channel_var = StringVar(value="chrome")
+        self.move_project_var = StringVar(value="")
+        self.headless_var = StringVar(value="0")
 
         self.build_layout()
         self.root.after(100, self.drain_output_queue)
@@ -140,10 +144,31 @@ class ProjectChatsApp:
 
         move = LabelFrame(parent, text="Auto-Move Approved Chats", padx=10, pady=10)
         move.pack(fill=X)
-        Checkbutton(move, text="Dry run", variable=self.dry_run_var, onvalue="1", offvalue="0").pack(side=LEFT)
-        Label(move, text="Limit").pack(side=LEFT, padx=(14, 4))
-        Entry(move, textvariable=self.limit_var, width=8).pack(side=LEFT)
-        Button(move, text="Auto-Move", command=self.auto_move).pack(side=LEFT, padx=10)
+        Label(move, text="Project override").pack(anchor="w")
+        Entry(move, textvariable=self.move_project_var).pack(fill=X, pady=(2, 8))
+
+        Label(move, text="Browser profile directory").pack(anchor="w")
+        profile_row = Frame(move)
+        profile_row.pack(fill=X, pady=(2, 8))
+        Entry(profile_row, textvariable=self.browser_profile_var).pack(side=LEFT, fill=X, expand=True)
+        Button(profile_row, text="Choose", command=self.choose_browser_profile).pack(side=LEFT, padx=(8, 0))
+        Button(profile_row, text="Open", command=self.open_browser_profile).pack(side=LEFT, padx=(8, 0))
+
+        options_row = Frame(move)
+        options_row.pack(fill=X, pady=(2, 8))
+        Label(options_row, text="Browser").pack(side=LEFT)
+        Entry(options_row, textvariable=self.browser_channel_var, width=12).pack(side=LEFT, padx=(4, 14))
+        Checkbutton(options_row, text="Dry run", variable=self.dry_run_var, onvalue="1", offvalue="0").pack(side=LEFT)
+        Checkbutton(options_row, text="Headless", variable=self.headless_var, onvalue="1", offvalue="0").pack(side=LEFT, padx=(10, 0))
+        Label(options_row, text="Limit").pack(side=LEFT, padx=(14, 4))
+        Entry(options_row, textvariable=self.limit_var, width=8).pack(side=LEFT)
+        Button(options_row, text="Auto-Move", command=self.auto_move).pack(side=LEFT, padx=10)
+
+        help_text = (
+            "Account selection happens by browser profile. The first non-dry run opens this profile; "
+            "sign into the ChatGPT account you want to use. Reuse a different profile directory for another account."
+        )
+        Label(move, text=help_text, wraplength=760, justify=LEFT).pack(anchor="w", pady=(4, 0))
 
     def build_outputs_tab(self, parent: Frame) -> None:
         outputs = [
@@ -186,6 +211,11 @@ class ProjectChatsApp:
         if selected:
             self.input_path_var.set(selected)
 
+    def choose_browser_profile(self) -> None:
+        selected = filedialog.askdirectory(title="Choose browser profile directory")
+        if selected:
+            self.browser_profile_var.set(selected)
+
     def create_profile(self) -> None:
         project_name = self.project_var.get().strip()
         terms = [term.strip() for term in self.terms_var.get().split(",") if term.strip()]
@@ -215,8 +245,16 @@ class ProjectChatsApp:
         args = ["auto-move"]
         if self.user_label_var.get().strip():
             args.extend(["--user-label", self.user_label_var.get().strip()])
+        if self.move_project_var.get().strip():
+            args.extend(["--project-name", self.move_project_var.get().strip()])
+        if self.browser_profile_var.get().strip():
+            args.extend(["--user-data-dir", self.browser_profile_var.get().strip()])
+        if self.browser_channel_var.get().strip():
+            args.extend(["--channel", self.browser_channel_var.get().strip()])
         if self.dry_run_var.get() == "1":
             args.append("--dry-run")
+        if self.headless_var.get() == "1":
+            args.append("--headless")
         if self.limit_var.get().strip():
             args.extend(["--limit", self.limit_var.get().strip()])
         self.run_cli(args)
@@ -269,6 +307,11 @@ class ProjectChatsApp:
 
     def open_workspace(self) -> None:
         path = self.workspace()
+        path.mkdir(parents=True, exist_ok=True)
+        webbrowser.open(path.resolve().as_uri())
+
+    def open_browser_profile(self) -> None:
+        path = Path(self.browser_profile_var.get()).expanduser() if self.browser_profile_var.get().strip() else self.workspace() / "browser-profile"
         path.mkdir(parents=True, exist_ok=True)
         webbrowser.open(path.resolve().as_uri())
 

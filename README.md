@@ -48,6 +48,24 @@ Or run the CLI:
 
 On macOS, you can also double-click `Project Chats.command` after running the installer.
 
+## Browser And Account Setup
+
+`auto-move` uses Playwright with the Chrome browser channel by default. It does not use your normal Chrome profile unless you point it there. By default it creates a separate browser profile here:
+
+```text
+project-chat-run/browser-profile
+```
+
+The ChatGPT account is whichever account you sign into inside that browser profile. To use another account, choose a different browser profile directory in the GUI or pass `--user-data-dir` in the CLI.
+
+GUI options are in `Run` -> `Auto-Move Approved Chats`:
+
+- `Browser`: default is `chrome`
+- `Browser profile directory`: where the ChatGPT login is stored
+- `Project override`: optional project name override
+- `Dry run`: logs what would move without opening/moving chats
+- `Limit`: process only the first N approved chats
+
 ## Manual Install
 
 ```bash
@@ -94,6 +112,12 @@ To move approved chats automatically through the ChatGPT UI:
 ```
 
 The first run opens a real browser profile at `project-chat-run/browser-profile`. Sign into ChatGPT there when prompted. The command writes `project-chat-run/outputs/move_log.csv`.
+
+To use a specific browser profile/account from the CLI:
+
+```bash
+./project-chats auto-move --user-data-dir ./profiles/alice
+```
 
 ## Multi-User Workflow
 

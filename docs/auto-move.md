@@ -34,6 +34,14 @@ project-chat-run/browser-profile
 
 Sign into the ChatGPT account that owns the approved chats. The browser profile is reused on later runs.
 
+Default browser channel is `chrome`. Override it with:
+
+```bash
+./project-chats auto-move --channel chromium
+```
+
+The account is not a setting in the tool. It is the ChatGPT login stored in the selected browser profile.
+
 ## Multi-User Runs
 
 Each user should run this from their own computer or their own browser profile:

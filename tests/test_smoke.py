@@ -72,6 +72,29 @@ class SmokeTest(unittest.TestCase):
         self.assertIn("custom-workspace", command)
         self.assertEqual(command[-1], "classify")
 
+    def test_gui_auto_move_options_map_to_cli(self):
+        command = build_cli_command(
+            Path("custom-workspace"),
+            [
+                "auto-move",
+                "--user-label",
+                "alice",
+                "--project-name",
+                "Project Atlas",
+                "--user-data-dir",
+                "profiles/alice",
+                "--channel",
+                "chrome",
+                "--limit",
+                "1",
+            ],
+        )
+        self.assertIn("--user-data-dir", command)
+        self.assertIn("profiles/alice", command)
+        self.assertIn("--channel", command)
+        self.assertIn("chrome", command)
+        self.assertIn("--project-name", command)
+
     def test_launcher_helpers_fail_clearly_before_install(self):
         repo = Path(__file__).resolve().parents[1]
         result = subprocess.run(
