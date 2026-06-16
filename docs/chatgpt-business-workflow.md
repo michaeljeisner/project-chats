@@ -8,7 +8,7 @@ ChatGPT Business users usually cannot export every teammate's private chat histo
 2. The project owner shares the Project with everyone who needs to move chats.
 3. Each user runs Project Chats locally against files they are authorized to process.
 4. Each user reviews `review_queue.html`.
-5. Each user opens `move_queue.html` and moves approved chats into the shared Project.
+5. Each user opens `move_queue.html` and moves approved chats into the shared Project, or runs `project-chats auto-move` to automate the visible UI.
 6. The project owner collects handoff zips if a consolidated memory pack is needed.
 
 ## Capturing Chats

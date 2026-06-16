@@ -16,6 +16,7 @@ It is designed for one-off ChatGPT Business/Team cleanup work where each user ca
   - `open_questions.md`
   - `source_chats.csv`
 - Generates `move_queue.html` with links and per-chat move instructions.
+- Optionally opens ChatGPT in a browser and automatically moves approved chats into the selected Project.
 - Creates a handoff zip for teammates or a project coordinator.
 
 ## What It Does Not Do
@@ -23,12 +24,19 @@ It is designed for one-off ChatGPT Business/Team cleanup work where each user ca
 - It does not scrape private workspace-wide chats.
 - It does not read browser cookies, passwords, or ChatGPT session storage.
 - It does not use undocumented ChatGPT APIs.
-- It does not automatically move chats into Projects because ChatGPT exposes that as a UI workflow, not a public API.
+- It does not use a ChatGPT Project API because OpenAI does not expose one for moving chats. The optional `auto-move` command drives the visible ChatGPT UI in a browser.
 
 ## Install
 
 ```bash
 python3 -m pip install .
+```
+
+For browser automation:
+
+```bash
+python3 -m pip install '.[browser]'
+python3 -m playwright install chromium
 ```
 
 Or run from a checkout without installing:
@@ -58,6 +66,14 @@ project-chat-run/outputs/move_queue.html
 
 Edit `project-chat-run/outputs/review_queue.csv` and set `approved=true` only for chats you want moved.
 
+To move approved chats automatically through the ChatGPT UI:
+
+```bash
+project-chats auto-move
+```
+
+The first run opens a real browser profile at `project-chat-run/browser-profile`. Sign into ChatGPT there when prompted. The command writes `project-chat-run/outputs/move_log.csv`.
+
 ## Multi-User Workflow
 
 1. Project coordinator creates a profile:
@@ -77,7 +93,7 @@ Edit `project-chat-run/outputs/review_queue.csv` and set `approved=true` only fo
    ```
 
 4. Each participant reviews `review_queue.html`.
-5. Each participant opens `move_queue.html` and moves approved chats into the shared ChatGPT Project.
+5. Each participant either opens `move_queue.html` and moves approved chats manually, or runs `project-chats auto-move` while signed into ChatGPT.
 6. Participants send the generated zip to the coordinator if a consolidated memory pack is needed.
 
 ## Inputs
@@ -120,3 +136,5 @@ project-chats build
 ## Safety
 
 Only run this on chats you are authorized to process. Review generated files before uploading them into a ChatGPT Project or sharing them with teammates.
+
+The `auto-move` command is best-effort UI automation. ChatGPT can change labels or menus without notice, so run `project-chats auto-move --dry-run` first, then use `--limit 1` for a supervised first move.

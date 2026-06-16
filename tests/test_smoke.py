@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from project_chats.browser_move import MoveOptions, auto_move
 from project_chats.core import build_outputs, bundle, classify, ingest, init_workspace
 
 
@@ -19,7 +20,7 @@ class SmokeTest(unittest.TestCase):
                         {
                             "user_label": "alice",
                             "conversation_id": "one",
-                            "title": "Atlas plan",
+                            "title": "Atlas fidelity plan",
                             "url": "https://chatgpt.com/c/one",
                             "messages": [
                                 {
@@ -53,6 +54,12 @@ class SmokeTest(unittest.TestCase):
 
             archive = bundle(workspace)
             self.assertTrue(archive.exists())
+
+            move_log = auto_move(MoveOptions(workspace=workspace, dry_run=True))
+            self.assertTrue(move_log.exists())
+            with move_log.open() as f:
+                move_rows = list(csv.DictReader(f))
+            self.assertEqual(move_rows[0]["status"], "dry_run")
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ from .core import (
     ingest,
     init_workspace,
 )
+from .browser_move import MoveOptions, auto_move
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -35,6 +36,16 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("build", help="Build approved project memory files and move queue.")
     sub.add_parser("bundle", help="Zip the profile and outputs for handoff.")
 
+    move = sub.add_parser("auto-move", help="Best-effort browser automation to move approved chats into a ChatGPT Project.")
+    move.add_argument("--user-label", help="Only move rows for this user label.")
+    move.add_argument("--project-name", help="Override the project name from project_profile.json.")
+    move.add_argument("--user-data-dir", type=Path, help="Playwright browser profile directory. Defaults to WORKSPACE/browser-profile.")
+    move.add_argument("--channel", default="chrome", help="Browser channel for Playwright. Default: chrome.")
+    move.add_argument("--headless", action="store_true", help="Run browser headless. Not recommended for first login.")
+    move.add_argument("--dry-run", action="store_true", help="Write move_log.csv without opening a browser.")
+    move.add_argument("--limit", type=int, help="Maximum approved chats to process.")
+    move.add_argument("--slow-mo-ms", type=int, default=150, help="Delay between browser actions in milliseconds.")
+
     example = sub.add_parser("copy-example", help="Copy sample input files to a destination directory.")
     example.add_argument("destination", type=Path)
 
@@ -56,6 +67,21 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "bundle":
         path = bundle(args.workspace)
         print(f"Wrote {path}")
+    elif args.command == "auto-move":
+        path = auto_move(
+            MoveOptions(
+                workspace=args.workspace,
+                user_label=args.user_label,
+                project_name=args.project_name,
+                user_data_dir=args.user_data_dir,
+                channel=args.channel,
+                headless=args.headless,
+                dry_run=args.dry_run,
+                limit=args.limit,
+                slow_mo_ms=args.slow_mo_ms,
+            )
+        )
+        print(f"Wrote move log to {path}")
     elif args.command == "copy-example":
         copy_example(args.destination)
         print(f"Copied examples to {args.destination}")
