@@ -1,5 +1,7 @@
 import csv
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -69,6 +71,19 @@ class SmokeTest(unittest.TestCase):
         self.assertIn("--workspace", command)
         self.assertIn("custom-workspace", command)
         self.assertEqual(command[-1], "classify")
+
+    def test_launcher_helpers_fail_clearly_before_install(self):
+        repo = Path(__file__).resolve().parents[1]
+        result = subprocess.run(
+            [sys.executable, "scripts/run-cli.py", "--help"],
+            cwd=repo,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("scripts/install.py", result.stderr)
 
 
 if __name__ == "__main__":

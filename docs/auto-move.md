@@ -7,6 +7,14 @@ It does not call a hidden ChatGPT API. It opens ChatGPT in a real browser and us
 ## Install
 
 ```bash
+python3 scripts/install.py
+```
+
+The installer adds the browser automation dependency and installs Chromium for Playwright.
+
+Manual install:
+
+```bash
 python3 -m pip install '.[browser]'
 python3 -m playwright install chromium
 ```
@@ -14,8 +22,8 @@ python3 -m playwright install chromium
 ## Recommended First Run
 
 ```bash
-project-chats auto-move --dry-run
-project-chats auto-move --limit 1
+./project-chats auto-move --dry-run
+./project-chats auto-move --limit 1
 ```
 
 The first non-dry run opens a browser profile under:
@@ -31,14 +39,14 @@ Sign into the ChatGPT account that owns the approved chats. The browser profile 
 Each user should run this from their own computer or their own browser profile:
 
 ```bash
-project-chats auto-move --user-label alice
+./project-chats auto-move --user-label alice
 ```
 
 If several people share one machine, use different browser profile directories:
 
 ```bash
-project-chats auto-move --user-label alice --user-data-dir ./profiles/alice
-project-chats auto-move --user-label bob --user-data-dir ./profiles/bob
+./project-chats auto-move --user-label alice --user-data-dir ./profiles/alice
+./project-chats auto-move --user-label bob --user-data-dir ./profiles/bob
 ```
 
 ## Output

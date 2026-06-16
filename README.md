@@ -26,28 +26,39 @@ It is designed for one-off ChatGPT Business/Team cleanup work where each user ca
 - It does not use undocumented ChatGPT APIs.
 - It does not use a ChatGPT Project API because OpenAI does not expose one for moving chats. The optional `auto-move` command drives the visible ChatGPT UI in a browser.
 
-## Install
+## Easiest Install
 
 ```bash
-python3 -m pip install .
+git clone https://github.com/michaeljeisner/project-chats.git
+cd project-chats
+python3 scripts/install.py
 ```
 
-For browser automation:
+Then run the GUI:
+
+```bash
+./project-chats-gui
+```
+
+Or run the CLI:
+
+```bash
+./project-chats --help
+```
+
+On macOS, you can also double-click `Project Chats.command` after running the installer.
+
+## Manual Install
 
 ```bash
 python3 -m pip install '.[browser]'
 python3 -m playwright install chromium
 ```
 
-Or run from a checkout without installing:
+Manual run commands:
 
 ```bash
-python3 -m project_chats --help
-```
-
-Launch the desktop GUI:
-
-```bash
+project-chats --help
 project-chats-gui
 ```
 
@@ -56,13 +67,13 @@ The GUI uses the CLI underneath the hood and streams command output into its log
 ## Quick Start
 
 ```bash
-project-chats init --project-name "Project Atlas" \
+./project-chats init --project-name "Project Atlas" \
   --term "Atlas" --term "launch" --term "fidelity"
 
-project-chats ingest ~/Downloads/conversations.json --user-label michael
-project-chats classify
-project-chats build
-project-chats bundle
+./project-chats ingest ~/Downloads/conversations.json --user-label michael
+./project-chats classify
+./project-chats build
+./project-chats bundle
 ```
 
 The same workflow is available in the GUI through `Setup`, `Run`, and `Outputs` tabs.
@@ -79,7 +90,7 @@ Edit `project-chat-run/outputs/review_queue.csv` and set `approved=true` only fo
 To move approved chats automatically through the ChatGPT UI:
 
 ```bash
-project-chats auto-move
+./project-chats auto-move
 ```
 
 The first run opens a real browser profile at `project-chat-run/browser-profile`. Sign into ChatGPT there when prompted. The command writes `project-chat-run/outputs/move_log.csv`.
@@ -89,17 +100,17 @@ The first run opens a real browser profile at `project-chat-run/browser-profile`
 1. Project coordinator creates a profile:
 
    ```bash
-   project-chats init --project-name "Shared Project" --term "client" --term "repo-name"
+   ./project-chats init --project-name "Shared Project" --term "client" --term "repo-name"
    ```
 
 2. Send `project-chat-run/project_profile.json` to each participant.
 3. Each participant runs:
 
    ```bash
-   project-chats ingest ./my_chats.json --user-label alice
-   project-chats classify
-   project-chats build
-   project-chats bundle
+   ./project-chats ingest ./my_chats.json --user-label alice
+   ./project-chats classify
+   ./project-chats build
+   ./project-chats bundle
    ```
 
 4. Each participant reviews `review_queue.html`.
@@ -140,11 +151,11 @@ The classifier intentionally favors review over silent automation. High-confiden
 Change the `approved` column in `review_queue.csv`, then run:
 
 ```bash
-project-chats build
+./project-chats build
 ```
 
 ## Safety
 
 Only run this on chats you are authorized to process. Review generated files before uploading them into a ChatGPT Project or sharing them with teammates.
 
-The `auto-move` command is best-effort UI automation. ChatGPT can change labels or menus without notice, so run `project-chats auto-move --dry-run` first, then use `--limit 1` for a supervised first move.
+The `auto-move` command is best-effort UI automation. ChatGPT can change labels or menus without notice, so run `./project-chats auto-move --dry-run` first, then use `--limit 1` for a supervised first move.

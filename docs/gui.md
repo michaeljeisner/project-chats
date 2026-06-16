@@ -4,16 +4,19 @@ Project Chats includes a small desktop GUI built with Python's standard Tkinter 
 
 Tkinter must be included in the Python install. On macOS, the official Python.org installer includes it; some Homebrew Python builds do not.
 
-Launch it with:
+Install and launch it with:
+
+```bash
+python3 scripts/install.py
+./project-chats-gui
+```
+
+On macOS, you can also double-click `Project Chats.command` after running the installer.
+
+Manual launch after package installation:
 
 ```bash
 project-chats-gui
-```
-
-Or from a checkout:
-
-```bash
-python3 -m project_chats.gui
 ```
 
 ## What The GUI Does
@@ -40,7 +43,7 @@ The app shows command output in the log panel.
 
 ## Browser Automation
 
-Install the browser extra before using `Auto-Move`:
+The one-command installer includes browser automation support. Manual install:
 
 ```bash
 python3 -m pip install '.[browser]'

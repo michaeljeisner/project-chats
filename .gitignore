@@ -6,4 +6,9 @@ dist/
 build/
 *.egg-info/
 project-chat-run/
+project-chats
+project-chats-gui
+project-chats.bat
+project-chats-gui.bat
+Project Chats.command
 *.zip
