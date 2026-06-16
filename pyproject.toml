@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "project-chats"
-version = "0.1.0"
-description = "Find project-related ChatGPT conversations and generate project memory/move queues."
+version = "0.2.0"
+description = "Find project-related ChatGPT conversations, review them in a desktop app, and move approved chats into a ChatGPT Project."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -13,9 +13,21 @@ authors = [{ name = "Project Chats contributors" }]
 keywords = ["chatgpt", "projects", "migration", "conversation-export"]
 classifiers = [
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
+  "Environment :: X11 Applications",
+  "Environment :: MacOS X",
+  "Environment :: Win32 (MS Windows)",
+  "Intended Audience :: End Users/Desktop",
+  "Topic :: Communications :: Chat",
+  "Topic :: Utilities",
 ]
+
+[project.urls]
+Homepage = "https://github.com/michaeljeisner/project-chats"
+Issues = "https://github.com/michaeljeisner/project-chats/issues"
+Source = "https://github.com/michaeljeisner/project-chats"
 
 [project.optional-dependencies]
 browser = ["playwright>=1.45"]

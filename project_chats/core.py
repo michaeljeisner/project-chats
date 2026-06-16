@@ -3,8 +3,10 @@ from __future__ import annotations
 import csv
 import html
 import json
+import os
 import re
 import shutil
+import sys
 import zipfile
 from collections import Counter
 from dataclasses import dataclass
@@ -14,6 +16,25 @@ from typing import Iterable
 
 
 DEFAULT_WORKSPACE = Path("project-chat-run")
+
+
+class ProjectChatsError(Exception):
+    """User-facing error the CLI prints and the GUI shows in a dialog."""
+
+
+def default_workspace_root() -> Path:
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "Project Chats"
+    if sys.platform.startswith("win"):
+        base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+        return Path(base) / "Project Chats"
+    base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+    return Path(base) / "project-chats"
+
+
+def slugify_project_name(name: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", name.strip()).strip("-").lower()
+    return cleaned or "untitled"
 
 
 @dataclass
@@ -53,7 +74,7 @@ def init_workspace(workspace: Path, project_name: str, terms: list[str], force: 
     paths = ensure_workspace(workspace)
     profile_path = paths["profile"]
     if profile_path.exists() and not force:
-        raise SystemExit(f"{profile_path} already exists. Use --force to overwrite it.")
+        raise ProjectChatsError(f"{profile_path} already exists. Use --force to overwrite it.")
     profile = {
         "project_name": project_name,
         "terms": sorted(set(t.strip() for t in terms if t.strip()), key=str.lower),
@@ -67,7 +88,7 @@ def init_workspace(workspace: Path, project_name: str, terms: list[str], force: 
 def load_profile(workspace: Path) -> dict:
     profile_path = workspace_paths(workspace)["profile"]
     if not profile_path.exists():
-        raise SystemExit(f"Missing {profile_path}. Run project-chats init first.")
+        raise ProjectChatsError(f"Missing {profile_path}. Create a project first.")
     profile = json.loads(profile_path.read_text())
     terms = []
     if isinstance(profile.get("terms"), list):
@@ -77,7 +98,7 @@ def load_profile(workspace: Path) -> dict:
             terms.extend(profile[key])
     terms = sorted(set(str(t).strip() for t in terms if str(t).strip()), key=str.lower)
     if not terms:
-        raise SystemExit(f"Add search terms to {profile_path}.")
+        raise ProjectChatsError(f"Add search terms to {profile_path}.")
     profile["_terms"] = terms
     profile["_term_patterns"] = [(term, compile_term(term)) for term in terms]
     return profile
@@ -96,14 +117,32 @@ def ingest(inputs: list[Path], workspace: Path, user_label: str) -> Path:
     for input_path in expand_inputs(inputs):
         chats.extend(load_input(input_path, user_label))
     if not chats:
-        raise SystemExit("No chats found in the provided input.")
+        raise ProjectChatsError("No chats found in the provided input.")
     output_path = paths["raw"] / f"{safe_name(user_label)}.json"
     existing = []
     if output_path.exists():
         existing = json.loads(output_path.read_text())
+    existing_ids = {str(row.get("conversation_id")) for row in normalize_for_json(existing) if row.get("conversation_id")}
+    incoming_ids = {chat.conversation_id for chat in chats}
+    new_ids = sorted(incoming_ids - existing_ids)
     merged = normalize_for_json(existing) + [chat_to_json(chat) for chat in chats]
     output_path.write_text(json.dumps(dedupe_chats(merged), indent=2) + "\n")
+    new_ids_path = paths["raw"] / f"{safe_name(user_label)}.new_ids.json"
+    new_ids_path.write_text(json.dumps(new_ids, indent=2) + "\n")
     return output_path
+
+
+def load_new_ids(workspace: Path) -> set[str]:
+    raw = workspace_paths(workspace)["raw"]
+    ids: set[str] = set()
+    for path in raw.glob("*.new_ids.json"):
+        try:
+            entries = json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+        if isinstance(entries, list):
+            ids.update(str(entry) for entry in entries if entry)
+    return ids
 
 
 def expand_inputs(inputs: list[Path]) -> Iterable[Path]:
@@ -118,7 +157,7 @@ def expand_inputs(inputs: list[Path]) -> Iterable[Path]:
 
 def load_input(path: Path, user_label: str) -> list[Chat]:
     if not path.exists():
-        raise SystemExit(f"Input not found: {path}")
+        raise ProjectChatsError(f"Input not found: {path}")
     if path.suffix.lower() == ".json":
         obj = json.loads(path.read_text())
         parsed = normalize_chatgpt_export(obj, path.name, user_label)
@@ -260,7 +299,7 @@ def classify(workspace: Path) -> Path:
     paths = ensure_workspace(workspace)
     chats = load_chats(workspace)
     if not chats:
-        raise SystemExit("No ingested chats found. Run project-chats ingest first.")
+        raise ProjectChatsError("No ingested chats found. Import a chat file first.")
     rows = []
     for chat in chats:
         result = score_chat(chat, profile)
@@ -362,7 +401,7 @@ def write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
 def read_review_rows(workspace: Path) -> list[dict]:
     queue = workspace_paths(workspace)["outputs"] / "review_queue.csv"
     if not queue.exists():
-        raise SystemExit("Run project-chats classify first.")
+        raise ProjectChatsError("No review queue found. Run classify first.")
     with queue.open() as f:
         return list(csv.DictReader(f))
 
@@ -553,7 +592,7 @@ def bundle(workspace: Path) -> Path:
     paths = ensure_workspace(workspace)
     outputs = paths["outputs"]
     if not outputs.exists():
-        raise SystemExit("No outputs found. Run project-chats build first.")
+        raise ProjectChatsError("No outputs found. Build the outputs first.")
     zip_path = workspace / "project-chat-handoff.zip"
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.write(paths["profile"], paths["profile"].relative_to(workspace))
@@ -570,5 +609,5 @@ def safe_name(value: str) -> str:
 
 def copy_example(destination: Path) -> None:
     if destination.exists():
-        raise SystemExit(f"{destination} already exists.")
+        raise ProjectChatsError(f"{destination} already exists.")
     shutil.copytree(Path(__file__).resolve().parents[1] / "examples", destination)

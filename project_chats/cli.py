@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from .core import (
     DEFAULT_WORKSPACE,
+    ProjectChatsError,
     build_outputs,
     bundle,
     classify,
@@ -16,6 +18,14 @@ from .browser_move import MoveOptions, auto_move
 
 
 def main(argv: list[str] | None = None) -> None:
+    try:
+        _dispatch(argv)
+    except ProjectChatsError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _dispatch(argv: list[str] | None) -> None:
     parser = argparse.ArgumentParser(
         prog="project-chats",
         description="Find project-related ChatGPT conversations and generate project memory/move queues.",
