@@ -22,6 +22,7 @@ browser = ["playwright>=1.45"]
 
 [project.scripts]
 project-chats = "project_chats.cli:main"
+project-chats-gui = "project_chats.gui:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

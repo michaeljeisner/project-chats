@@ -45,6 +45,14 @@ Or run from a checkout without installing:
 python3 -m project_chats --help
 ```
 
+Launch the desktop GUI:
+
+```bash
+project-chats-gui
+```
+
+The GUI uses the CLI underneath the hood and streams command output into its log panel. It requires Python Tkinter, which is included with the official Python.org macOS installer but may be missing from some package-manager Python builds.
+
 ## Quick Start
 
 ```bash
@@ -56,6 +64,8 @@ project-chats classify
 project-chats build
 project-chats bundle
 ```
+
+The same workflow is available in the GUI through `Setup`, `Run`, and `Outputs` tabs.
 
 Open:
 

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from project_chats.browser_move import MoveOptions, auto_move
 from project_chats.core import build_outputs, bundle, classify, ingest, init_workspace
+from project_chats.gui import build_cli_command
 
 
 class SmokeTest(unittest.TestCase):
@@ -60,6 +61,14 @@ class SmokeTest(unittest.TestCase):
             with move_log.open() as f:
                 move_rows = list(csv.DictReader(f))
             self.assertEqual(move_rows[0]["status"], "dry_run")
+
+    def test_gui_command_uses_cli_under_the_hood(self):
+        command = build_cli_command(Path("custom-workspace"), ["classify"])
+        self.assertIn("-m", command)
+        self.assertIn("project_chats", command)
+        self.assertIn("--workspace", command)
+        self.assertIn("custom-workspace", command)
+        self.assertEqual(command[-1], "classify")
 
 
 if __name__ == "__main__":
