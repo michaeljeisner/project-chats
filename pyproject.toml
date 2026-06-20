@@ -4,17 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "project-chats"
-version = "0.2.0"
+version = "0.4.0"
 description = "Find project-related ChatGPT conversations, review them in a desktop app, and move approved chats into a ChatGPT Project."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "Project Chats contributors" }]
 keywords = ["chatgpt", "projects", "migration", "conversation-export"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Environment :: X11 Applications",
   "Environment :: MacOS X",
@@ -30,7 +29,7 @@ Issues = "https://github.com/michaeljeisner/project-chats/issues"
 Source = "https://github.com/michaeljeisner/project-chats"
 
 [project.optional-dependencies]
-browser = ["playwright>=1.45"]
+browser = ["playwright>=1.45", "requests>=2.28"]
 
 [project.scripts]
 project-chats = "project_chats.cli:main"

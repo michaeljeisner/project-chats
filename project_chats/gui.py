@@ -44,16 +44,46 @@ def load_tkinter() -> None:
         from tkinter import ttk as ttk_mod
         from tkinter import filedialog as fd
         from tkinter import messagebox as mb
+        tk = tk_mod
+        ttk = ttk_mod
+        filedialog = fd
+        messagebox = mb
     except ImportError as exc:
-        raise SystemExit(
-            "The desktop GUI requires Python Tkinter. Install a Python build with Tk support, "
-            "or use the CLI with `project-chats --help`."
-        ) from exc
+        _tk_missing_exit(exc)
 
-    tk = tk_mod
-    ttk = ttk_mod
-    filedialog = fd
-    messagebox = mb
+
+def _tk_missing_exit(exc: Exception) -> None:
+    msg = "The desktop GUI requires Python Tkinter, which is missing from this Python build.\n\n"
+
+    if sys.platform == "darwin":
+        # Detect homebrew Python by checking sys.executable path
+        exe = sys.executable.lower()
+        if "homebrew" in exe or "cellar" in exe or "opt" in exe:
+            # Try to figure out the version suffix
+            ver = f"{sys.version_info.major}.{sys.version_info.minor}"
+            msg += (
+                f"You are using Homebrew Python, which does not include Tkinter by default.\n"
+                f"Fix it with:\n\n"
+                f"    brew install python-tk@{ver}\n\n"
+                f"Then reinstall the app:\n\n"
+                f"    pipx reinstall project-chats\n\n"
+                f"Or install the official Python from https://python.org, which includes Tkinter."
+            )
+        else:
+            msg += "Install the official Python from https://python.org (it includes Tkinter)."
+    elif sys.platform.startswith("linux"):
+        msg += (
+            "Install Tkinter for your distribution, then reinstall:\n\n"
+            "  Ubuntu/Debian:  sudo apt install python3-tk\n"
+            "  Fedora:         sudo dnf install python3-tkinter\n"
+            "  Arch:           sudo pacman -S tk\n\n"
+            "Then: pipx reinstall project-chats"
+        )
+    else:
+        msg += "Install a Python build that includes Tkinter (e.g. the official python.org installer)."
+
+    msg += "\n\nAlternatively, use the CLI: project-chats --help"
+    raise SystemExit(msg) from exc
 
 
 STEP_TITLES = [
@@ -75,6 +105,7 @@ class ProjectChatsApp:
         self.running = False
         self.last_exit_code: int | None = None
         self.playwright_ok = False
+        self._quiet_fail = False
 
         self.workspace_path = self._resolve_initial_workspace()
         self.current_step = 1
@@ -92,6 +123,7 @@ class ProjectChatsApp:
         self.status_var = tk.StringVar(value="Ready")
         self.workspace_label_var = tk.StringVar()
         self.show_new_only_var = tk.BooleanVar(value=False)
+        self.auth_status_var = tk.StringVar(value="ChatGPT sign-in status unknown.")
 
         self.review_rows: list[dict] = []
         self.new_ids: set[str] = set()
@@ -328,6 +360,17 @@ class ProjectChatsApp:
             foreground="#374151",
         ).pack(anchor="w", pady=(0, 16))
 
+        fetch_box = ttk.LabelFrame(card, text="No export? Fetch from ChatGPT (Team/Business)", padding=10)
+        fetch_box.pack(fill="x", pady=(0, 16))
+        ttk.Label(
+            fetch_box,
+            text="Team/Business accounts can't export chats. This downloads your own conversations directly through ChatGPT — sign in first on the Move step, then fetch here. Set your label below first.",
+            wraplength=680,
+            justify="left",
+            foreground="#374151",
+        ).pack(anchor="w", pady=(0, 8))
+        ttk.Button(fetch_box, text="Fetch my ChatGPT chats", command=self._fetch_from_chatgpt).pack(anchor="w")
+
         ttk.Label(card, text="Your label for these chats (e.g. your name)").pack(anchor="w")
         ttk.Entry(card, textvariable=self.user_label_var, width=40).pack(anchor="w", fill="x", pady=(2, 12))
 
@@ -366,6 +409,21 @@ class ProjectChatsApp:
             messagebox.showerror("Missing input", "Choose a file or folder to import.")
             return
         args = ["ingest", input_path, "--user-label", user_label]
+        self._run_cli(args, on_done=self._after_ingest)
+
+    def _fetch_from_chatgpt(self) -> None:
+        user_label = self.user_label_var.get().strip()
+        if not user_label:
+            messagebox.showerror("Missing label", "Enter a label for these chats (your name works) before fetching.")
+            return
+        if not self._require_playwright():
+            return
+        args = ["fetch", "--user-label", user_label]
+        if self.browser_profile_var.get().strip():
+            args.extend(["--user-data-dir", self.browser_profile_var.get().strip()])
+        if self.browser_channel_var.get().strip():
+            args.extend(["--channel", self.browser_channel_var.get().strip()])
+        self._set_status("Fetching chats from ChatGPT…")
         self._run_cli(args, on_done=self._after_ingest)
 
     def _classify_only(self) -> None:
@@ -589,6 +647,8 @@ class ProjectChatsApp:
             foreground="#374151",
         ).pack(anchor="w", pady=(0, 12))
 
+        self._render_account_box(outer)
+
         outputs_box = ttk.LabelFrame(outer, text="Generated files", padding=10)
         outputs_box.pack(fill="x", pady=(0, 12))
         for label, rel_path in [
@@ -623,17 +683,22 @@ class ProjectChatsApp:
             ).pack(side="left")
             ttk.Button(banner, text="Install now", command=self._install_playwright).pack(side="right")
 
-        ttk.Label(move_box, text="Project override (optional)").grid(row=1, column=0, sticky="w")
-        ttk.Entry(move_box, textvariable=self.move_project_var).grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=2)
+        # Gridded options live in their own frame so move_box stays pack-only
+        # (mixing pack and grid in one container is invalid in Tk).
+        grid_frame = ttk.Frame(move_box)
+        grid_frame.pack(fill="x")
 
-        ttk.Label(move_box, text="Browser profile directory").grid(row=2, column=0, sticky="w")
-        prof_row = ttk.Frame(move_box)
-        prof_row.grid(row=2, column=1, sticky="ew", padx=(8, 0), pady=2)
+        ttk.Label(grid_frame, text="Project override (optional)").grid(row=0, column=0, sticky="w")
+        ttk.Entry(grid_frame, textvariable=self.move_project_var).grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=2)
+
+        ttk.Label(grid_frame, text="Browser profile directory").grid(row=1, column=0, sticky="w")
+        prof_row = ttk.Frame(grid_frame)
+        prof_row.grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=2)
         ttk.Entry(prof_row, textvariable=self.browser_profile_var).pack(side="left", fill="x", expand=True)
         ttk.Button(prof_row, text="Choose…", command=self._choose_browser_profile).pack(side="left", padx=(8, 0))
 
-        opts_row = ttk.Frame(move_box)
-        opts_row.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(8, 4))
+        opts_row = ttk.Frame(grid_frame)
+        opts_row.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(8, 4))
         ttk.Label(opts_row, text="Browser channel").pack(side="left")
         ttk.Entry(opts_row, textvariable=self.browser_channel_var, width=10).pack(side="left", padx=(4, 12))
         ttk.Checkbutton(opts_row, text="Dry run (preview)", variable=self.dry_run_var).pack(side="left")
@@ -641,9 +706,66 @@ class ProjectChatsApp:
         ttk.Label(opts_row, text="Limit").pack(side="left", padx=(12, 4))
         ttk.Entry(opts_row, textvariable=self.limit_var, width=6).pack(side="left")
 
-        ttk.Button(move_box, text="Auto-Move", command=self._auto_move).grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        ttk.Button(grid_frame, text="Auto-Move", command=self._auto_move).grid(row=3, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
-        move_box.columnconfigure(1, weight=1)
+        grid_frame.columnconfigure(1, weight=1)
+
+    def _render_account_box(self, parent) -> None:
+        box = ttk.LabelFrame(parent, text="ChatGPT account", padding=10)
+        box.pack(fill="x", pady=(0, 12))
+        ttk.Label(box, textvariable=self.auth_status_var, foreground="#374151").pack(anchor="w", pady=(0, 6))
+        row = ttk.Frame(box)
+        row.pack(fill="x")
+        ttk.Button(row, text="Sign in to ChatGPT", command=self._sign_in_chatgpt).pack(side="left")
+        ttk.Button(row, text="Check sign-in", command=self._check_sign_in).pack(side="left", padx=(8, 0))
+        ttk.Label(
+            box,
+            text="Opens your browser using the profile below. Sign in once, then close that browser window — the session is reused for Auto-Move.",
+            wraplength=680,
+            justify="left",
+            foreground="#6b7280",
+        ).pack(anchor="w", pady=(6, 0))
+
+    def _login_args(self, extra: list[str]) -> list[str]:
+        args = ["login", *extra]
+        if self.browser_profile_var.get().strip():
+            args.extend(["--user-data-dir", self.browser_profile_var.get().strip()])
+        if self.browser_channel_var.get().strip():
+            args.extend(["--channel", self.browser_channel_var.get().strip()])
+        return args
+
+    def _require_playwright(self) -> bool:
+        if self.playwright_ok:
+            return True
+        messagebox.showerror(
+            "Browser automation not installed",
+            "Sign-in needs Playwright + Chromium. Install them from the Auto-Move banner below first.",
+        )
+        return False
+
+    def _sign_in_chatgpt(self) -> None:
+        if not self._require_playwright():
+            return
+        self.auth_status_var.set("Opening your browser — sign in to ChatGPT there, then close that window…")
+        self._run_cli(self._login_args([]), on_done=self._after_sign_in)
+
+    def _after_sign_in(self, code: int) -> None:
+        if code == 0:
+            self.auth_status_var.set("✓ Signed in to ChatGPT.")
+        else:
+            self.auth_status_var.set("Sign-in not detected — try again.")
+
+    def _check_sign_in(self) -> None:
+        if not self._require_playwright():
+            return
+        self.auth_status_var.set("Checking sign-in…")
+        self._run_cli(self._login_args(["--check"]), on_done=self._after_check_sign_in, quiet_fail=True)
+
+    def _after_check_sign_in(self, code: int) -> None:
+        if code == 0:
+            self.auth_status_var.set("✓ Signed in to ChatGPT.")
+        else:
+            self.auth_status_var.set("Not signed in. Use “Sign in to ChatGPT”.")
 
     def _choose_browser_profile(self) -> None:
         selected = filedialog.askdirectory(title="Choose browser profile directory")
@@ -676,7 +798,7 @@ class ProjectChatsApp:
 
     # ------------------------------------------------------------------ Subprocess runner
 
-    def _run_cli(self, args: list[str], workspace_override: Path | None = None, on_done=None) -> None:
+    def _run_cli(self, args: list[str], workspace_override: Path | None = None, on_done=None, quiet_fail: bool = False) -> None:
         if self.running:
             messagebox.showinfo("Busy", "Wait for the current command to finish.")
             return
@@ -684,6 +806,7 @@ class ProjectChatsApp:
         command = build_cli_command(workspace, args)
         self.running = True
         self.last_exit_code = None
+        self._quiet_fail = quiet_fail
         action = args[0] if args else "command"
         self._set_status(f"Running {action}…")
         self.output_queue.put(("log", f"\n$ {' '.join(command)}\n"))
@@ -728,12 +851,12 @@ class ProjectChatsApp:
                 elif kind == "done":
                     code = int(payload)
                     self.last_exit_code = code
-                    if code != 0:
+                    if code != 0 and not self._quiet_fail:
                         self._toggle_log(show=True)
                         last_line = self._last_meaningful_log_line()
                         messagebox.showerror("Command failed", last_line or f"Exit code {code}.")
                         self._set_status(f"Failed: {last_line[:120]}" if last_line else "Failed.")
-                    else:
+                    elif code == 0:
                         self._set_status("Done.")
                 elif kind == "callback":
                     code = self.last_exit_code if self.last_exit_code is not None else 0

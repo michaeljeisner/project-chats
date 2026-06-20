@@ -112,12 +112,21 @@ def compile_term(term: str) -> re.Pattern:
 
 
 def ingest(inputs: list[Path], workspace: Path, user_label: str) -> Path:
-    paths = ensure_workspace(workspace)
     chats: list[Chat] = []
     for input_path in expand_inputs(inputs):
         chats.extend(load_input(input_path, user_label))
     if not chats:
         raise ProjectChatsError("No chats found in the provided input.")
+    return persist_chats(chats, workspace, user_label)
+
+
+def persist_chats(chats: list[Chat], workspace: Path, user_label: str) -> Path:
+    """Merge chats into the user's raw_chats file and record which ids are new.
+
+    Shared by file ingest and ChatGPT API fetch so both land in the same place
+    and feed the same classify/build stages.
+    """
+    paths = ensure_workspace(workspace)
     output_path = paths["raw"] / f"{safe_name(user_label)}.json"
     existing = []
     if output_path.exists():

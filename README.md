@@ -12,9 +12,24 @@ playwright install chromium
 project-chats-gui
 ```
 
-That's it — no clone, no virtualenv to manage. The first run of the GUI will offer to install the browser automation pieces if they aren't already there.
+No clone, no virtualenv to manage. The `[browser]` extra installs Playwright; `playwright install chromium` downloads the browser binary used by Auto-Move. The GUI will also offer to run this for you on first launch.
 
-If you don't have `pipx`, install it with `python3 -m pip install --user pipx && python3 -m pipx ensurepath`. The `[browser]` extra pulls in Playwright; `playwright install chromium` downloads the actual browser binary the move step uses.
+### macOS + Homebrew Python
+
+Homebrew Python does not include Tkinter (required by the GUI). Install it first:
+
+```bash
+brew install python-tk@3.14   # match your Python version
+pipx install 'project-chats[browser]'
+playwright install chromium
+project-chats-gui
+```
+
+If you already installed project-chats and then installed python-tk, run `pipx reinstall project-chats` to pick it up.
+
+The official [python.org](https://www.python.org/downloads/) macOS installer includes Tkinter and avoids this step entirely.
+
+If you don't have `pipx`: `brew install pipx && pipx ensurepath`.
 
 ## What It Does
 
@@ -105,11 +120,28 @@ project-chats auto-move --user-data-dir ./profiles/alice
 4. Each participant reviews and either uses the move queue HTML manually or runs `project-chats auto-move` while signed in.
 5. Participants send the generated zip to the coordinator if a consolidated memory pack is needed.
 
-## Inputs
+## Getting your chats in
 
-### ChatGPT Export
+### Fetch directly from ChatGPT (Team/Business — no export)
 
-Personal ChatGPT exports include `conversations.json`. ChatGPT Business may not expose the same export flow, so this format is supported when available but not required.
+ChatGPT Team/Business accounts don't offer a per-user data export. For those, Project Chats can download your own conversations directly through ChatGPT's web API — the same calls the web app makes:
+
+1. Sign in once (Move step → **Sign in to ChatGPT**, or `project-chats login`).
+2. Fetch (Import step → **Fetch my ChatGPT chats**, or `project-chats fetch --user-label you`).
+
+The session is read from the browser profile you signed into — you never copy a cookie by hand. From the CLI you can also pass a token manually with `--session-token` if you prefer.
+
+```bash
+project-chats login
+project-chats fetch --user-label michael
+project-chats classify
+```
+
+This is best-effort and uses an undocumented internal API, so — like Auto-Move — it can break when ChatGPT changes. It only ever reads *your own* conversations, the same ones you can see in your browser.
+
+### ChatGPT export (personal accounts)
+
+Personal ChatGPT exports include `conversations.json`. Import it from the Import step or with `project-chats ingest conversations.json --user-label you`.
 
 ### Normalized JSON
 
@@ -140,15 +172,13 @@ The `auto-move` command is best-effort UI automation. ChatGPT can change labels 
 
 ## Hack on It
 
-If you want to modify Project Chats or contribute:
-
 ```bash
 git clone https://github.com/michaeljeisner/project-chats.git
 cd project-chats
 python3 scripts/install.py
 ```
 
-That creates a `.venv` in the repo, installs an editable copy with the browser extra, and writes `./project-chats`, `./project-chats-gui`, and (on macOS) `Project Chats.command` launchers at the repo root.
+That creates a `.venv`, installs an editable copy with the browser extra, and writes `./project-chats-gui`, `./project-chats`, and (macOS) `Project Chats.command` launchers.
 
 Run tests:
 
